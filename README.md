@@ -1,2 +1,3 @@
 # automating-emulator-shortcuts
-figuring out how to bundle emulators to act as standalone games
+
+this repository is a collection of notes and scripts for creating custom emulator shortcuts to make it feel more like youre launching a standalone game
