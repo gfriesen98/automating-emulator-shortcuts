@@ -5,7 +5,7 @@
 # Install Game Shortcut.bat -> bat script to launch ps script for the end user
 #   /EmuDir
 #      /games
-#        myGame.iso
+#        Game_disk1.iso
 #      createShortcut.ps1
 #      [rest of emulator files/folders here]
 #
