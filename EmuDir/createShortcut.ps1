@@ -99,7 +99,7 @@ $props = (
         # ensure these attributes are changed to your liking
         'ShortcutPath' = Join-Path -Path $folderBrowser.SelectedPath -ChildPath 'NAME-OF-SHORTCUT (Disk 1).lnk'
         'TargetPath'   = $emulatorExePath
-        'Arguments'    = '-fullscreen', '-portable', '-slowboot', "$currPath\EmuDir\games\Game_disk1.cue"
+        'Arguments'    = '-fullscreen', '-portable', '-slowboot', "$currPath\EmuDir\games\Game_disk1.cue" # duckstation arguments
         'IconLocation' = $iconPath
         'Description'  = 'Game (Disk 1)'
     },
