@@ -1,0 +1,22 @@
+we can use powershell to create shortcuts for launching roms for emulators
+
+it should be ensured that emulators should be installed portably for it to make sense to automate
+
+the emulator should also be able to be launched with command arguments, obviously
+
+for duckstation:
+1. put games in a 'games' folder
+2. put bios in a 'bios' folder
+3. create "portable.txt" in duckstation root or launch the exe with "-portable" to force portable
+launching duckstation should create its folders and recognize the bios we added already
+
+multidisk games should be single duckstation instances with both isos/cues in the games folder, seperate shortcuts can be added by editing the createShortcut script to make 2 shortcuts for each disk. then the saves folder can be shared
+
+further reference the "createShortcut.ps1" script, it would need to be edited per game
+
+icons should be 256x256, windows recognizes this as the max size and will downscale as needed
+
+todo for duckstation:
+- how to create -resume shortcut, if no savestate exists it wont launch ??
+- create configurable settings file to create, allow upscaling etc (.\duckstation\settings.ini)
+	- need to ensure this doesnt get overwritten, when duckstation launches in portable mode it generates these files/folders

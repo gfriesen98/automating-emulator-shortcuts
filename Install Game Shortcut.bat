@@ -1,4 +1,6 @@
 @echo off
-powershell .\EmuDir\createShortcut.ps1
-echo Finished!
+@REM powershell .\EmuDir\createShortcut.ps1
+@REM echo Finished!
+
+powershell ".\createGameShortcut.ps1
 pause

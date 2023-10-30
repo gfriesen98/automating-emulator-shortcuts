@@ -1,0 +1,3 @@
+Place both the Xenogears folder and .bat file to any desired location.
+
+Run "Install Xenogears Shortcuts.bat" to create shortcuts
