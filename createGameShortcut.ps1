@@ -68,9 +68,8 @@ function Get-PsxDatacenterImage {
         [string]$SaveLocation
     )
 
-    Write-Host "Getting thumbnail for $Serial"
     # example url https://psxdatacenter.com/images/covers/U/0-9/SLUS-01300.jpg
-    $baseUrl = "https://psxdatacenter.com/images/covers/"
+    $baseUrl = "https://psxdatacenter.com/images/covers"
     $regionCode = switch ($Region) {
         USA { 'U' }
         Japan { 'J' }
@@ -87,9 +86,17 @@ function Get-PsxDatacenterImage {
         $categoryCode = $RomName.ToUpper()[0]
     }
 
+    if ($RomName -match '\s\(Dis. [2-9]\)') {
+        if ([System.IO.File]::Exists("$SaveLocation.ico")) {
+            Write-Host "Using existing thumbnail"
+            return $null
+        }
+    }
+    Write-Host "Getting thumbnail for $Serial"
+    Write-Host "URL: $baseUrl/$regionCode/$categoryCode/$Serial.jpg"
     Invoke-WebRequest "$baseUrl/$regionCode/$categoryCode/$Serial.jpg" -OutFile "$SaveLocation.jpg"
-    .\convert.exe "$SaveLocation.jpg" -bordercolor white -border 0 -resize 256x256 -delete 0 -alpha off -colors 256 "$SaveLocation.ico"
-    Remove-Item -Path "$SaveLocation.jpg"
+    .\convert.exe "$SaveLocation.jpg" -resize 256x256 "$SaveLocation.ico"
+    # Remove-Item -Path "$SaveLocation.jpg"
 }
 
 function Search-Redump {
@@ -104,9 +111,7 @@ function Search-Redump {
     )
     Write-Host "RomName $RomName"
     $replace = $($RomName -replace "\s\(Dis. [0-9]\)", '').toLower().trim()
-    Write-Host "Replace $replace"
     $replace = $($replace -replace "\s", '-')
-    Write-Host "Replace 2 $replace"
     # $replace = $replace.Replace(' ', '-')
     Write-Host "Searching for serial code..."
     Write-Host "Gathering data for $replace ..."
@@ -136,9 +141,17 @@ function Search-Redump {
         Write-Host "[$i]: " $r[$i].Name $r[$i].Serial.trim().split('&')[0]
     }
 
-    $selection = Read-Host "Select best result"
-    Write-Host $r[$selection]
-    return $r[$selection].Serial.trim().split('&')[0]
+    if ($RomName -match '\s\(Dis. [2-9]\)') {
+        Write-Host "It appears this is not the primary disk. An icon may not be available for this disk"
+        Write-Host "!! Please select disk 1 for the icon !!"
+        $selection = Read-Host "Select Disk 1 result"
+        Write-Host $r[$selection]
+        return $r[$selection].Serial.trim().split('&')[0]
+    } else {
+        $selection = Read-Host "Select best result"
+        Write-Host $r[$selection]
+        return $r[$selection].Serial.trim().split('&')[0]
+    }
 }
 
 # start script
@@ -182,6 +195,8 @@ if ($createIcon -eq 'y') {
 
     $iconLocation = Split-Path -Parent $emulatorPath
     $iconLocation = "$iconLocation\$serialCode"
+    # create folder for the thumbnail
+    # New-Item -ItemType Directory -Path "$iconLocation\$serialCode"
     Get-PsxDatacenterImage -RomName $romName -Region $selectedRegion -Serial $serialCode -SaveLocation $iconLocation
 
     Write-Host "Select shortcut save location"
