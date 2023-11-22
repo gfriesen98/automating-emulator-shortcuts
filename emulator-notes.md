@@ -6,6 +6,10 @@ it should be ensured that emulators should be installed portably for it to make 
 
 the emulator should also be able to be launched with command arguments, obviously
 
+## windows notes
+
+icons should be 256x256, windows recognizes this as the max size and will downscale as needed
+
 ## Duckstation
 
 for duckstation:
@@ -18,9 +22,14 @@ multidisk games should be single duckstation instances with both isos/cues in th
 
 further reference the "createShortcut.ps1" script, it would need to be edited per game
 
-icons should be 256x256, windows recognizes this as the max size and will downscale as needed
-
 todo for duckstation:
 - how to create -resume shortcut, if no savestate exists it wont launch ??
 - create configurable settings file to create, allow upscaling etc (.\duckstation\settings.ini)
 	- need to ensure this doesnt get overwritten, when duckstation launches in portable mode it generates these files/folders
+
+## Dolphin
+
+should just be able to extract dolphin to a folder and thats it?
+
+launch game via commandline:
+./Dolphin.exe --config "Dolphin.Display.Fullscreen=True" -b -e ./games/Pokemon\ XD\ -\ Gale\ of\ Darkness\ \(USA\).iso

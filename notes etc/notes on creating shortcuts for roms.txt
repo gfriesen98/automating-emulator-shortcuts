@@ -5,9 +5,10 @@ it should be ensured that emulators should be installed portably for it to make 
 the emulator should also be able to be launched with command arguments, obviously
 
 for duckstation:
-1. put games in a 'games' folder
-2. put bios in a 'bios' folder
-3. create "portable.txt" in duckstation root or launch the exe with "-portable" to force portable
+1. extract emulator to a folder
+2. put games in a 'games' folder in the emulator folder
+3. put bios in a 'bios' folder in the emulator folder
+4. create "portable.txt" in duckstation root or launch the exe with "-portable" to force portable
 launching duckstation should create its folders and recognize the bios we added already
 
 multidisk games should be single duckstation instances with both isos/cues in the games folder, seperate shortcuts can be added by editing the createShortcut script to make 2 shortcuts for each disk. then the saves folder can be shared

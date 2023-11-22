@@ -2,7 +2,7 @@
 Add-Type -AssemblyName System.Windows.Forms
 
 # stolen from the answer for https://stackoverflow.com/questions/57547071/powershell-create-shortcut-to-network-printer, works well for this applicaton
-# i should rewrite this further, it doesnt have to go this crazy
+# i should rewrite this, it doesnt have to go this crazy
 function New-Shortcut {
     [CmdletBinding()]
     Param (   
@@ -15,7 +15,7 @@ function New-Shortcut {
         [string[]]$HotKey = $null, # a string like "CTRL+SHIFT+F" or an array like 'CTRL','SHIFT','F'
         [string]$WorkingDirectory = $null,  
         [string]$Description = $null,
-        [string]$IconLocation = $null, # a string like "notepad.exe, 0", (can be a path to an image. 256x256 max res)
+        [string]$IconLocation = $null, # a string like "notepad.exe, 0", (can be a path to an image .ico file.)
         [ValidateSet('Default', 'Maximized', 'Minimized')]
         [string]$WindowStyle = 'Default',
         [switch]$RunAsAdmin
@@ -55,6 +55,7 @@ function New-Shortcut {
     [System.GC]::WaitForPendingFinalizers()
 }
 
+# find image for psx games from https://psxdatacenter.com
 function Get-PsxDatacenterImage {
     [CmdletBinding()]
     Param (
@@ -78,6 +79,8 @@ function Get-PsxDatacenterImage {
         France { 'P' }
         Default { 'U' }
     }
+
+    # parse the rom filename for the first character
     $categoryCode = "0-9"
     if ($RomName.ToUpper() -match '^(\d+)') {
         $categoryCode = "0-9"
@@ -86,19 +89,23 @@ function Get-PsxDatacenterImage {
         $categoryCode = $RomName.ToUpper()[0]
     }
 
+    # multidisk games should re-use disk 1's thumbnail if it exists
     if ($RomName -match '\s\(Dis. [2-9]\)') {
         if ([System.IO.File]::Exists("$SaveLocation.ico")) {
             Write-Host "Using existing thumbnail"
             return $null
         }
     }
+
     Write-Host "Getting thumbnail for $Serial"
     Write-Host "URL: $baseUrl/$regionCode/$categoryCode/$Serial.jpg"
     Invoke-WebRequest "$baseUrl/$regionCode/$categoryCode/$Serial.jpg" -OutFile "$SaveLocation.jpg"
-    .\convert.exe "$SaveLocation.jpg" -resize 256x256 "$SaveLocation.ico"
+    # .\convert.exe "$SaveLocation.jpg" -resize 256x256 "$SaveLocation.ico"
+    .\convert.exe "$SaveLocation.jpg" "$SaveLocation.ico"
     # Remove-Item -Path "$SaveLocation.jpg"
 }
 
+# search http://redump.org for psx game serial codes (like its SLES code or whatever, this is needed for psxdatacenter.com as thats how they name their game icon images)
 function Search-Redump {
     [CmdletBinding()]
     Param (
@@ -109,25 +116,26 @@ function Search-Redump {
         [ValidateNotNullOrEmpty()]
         [string]$SelectedRegion
     )
+
     Write-Host "RomName $RomName"
-    $replace = $($RomName -replace "\s\(Dis. [0-9]\)", '').toLower().trim()
-    $replace = $($replace -replace "\s", '-')
-    # $replace = $replace.Replace(' ', '-')
+    $replace = $($RomName -replace "\s\(Dis. [0-9]\)", '').toLower().trim() # redump's search wont show results if you have (Disk X) in the name... should just be the name of the game
+    $replace = $($replace -replace "\s", '-') # url param inevitably becomes lowercase and spaces replaced with -
     Write-Host "Searching for serial code..."
     Write-Host "Gathering data for $replace ..."
+
     $res = Invoke-WebRequest "http://redump.org/discs/quicksearch/$replace"
     $parsed = $res.ParsedHtml
 
     # first 8 are the table headers
+    # its insane to me that powershell can do this like why
     $tr = $parsed.getElementsByTagName('tr')
-    $results = New-Object System.Collections.Generic.List[System.Object]
+    $results = New-Object System.Collections.Generic.List[System.Object] # store correct results in a list
     for ($j = 0; $j -le $tr.length - 1; $j++) {
+        # /discs/quicksearch/$replace html returns a <table> that contains the data we need, theres probably a better way to write this but whatever
         $region = [String]$tr[$j].children[0].children[0].title
         $name = [String]$tr[$j].children[1].children[0].innerhtml
         $serial = [String]$tr[$j].children[6].innerhtml
-        # Write-Host $region $name $serial
         if ($region -eq $SelectedRegion) {
-            # Write-Host $region $name $serial
             $results.Add(@{
                 "Region" = $region
                 "Name" = $name
@@ -141,10 +149,11 @@ function Search-Redump {
         Write-Host "[$i]: " $r[$i].Name $r[$i].Serial.trim().split('&')[0]
     }
 
+    # multidisk psx games typically use disk 1's icon, because im lazy i just ask the user to select disk 1 for the icon
     if ($RomName -match '\s\(Dis. [2-9]\)') {
-        Write-Host "It appears this is not the primary disk. An icon may not be available for this disk"
-        Write-Host "!! Please select disk 1 for the icon !!"
-        $selection = Read-Host "Select Disk 1 result"
+        Write-Host "It appears this is not the primary disk. An icon may not be available for this disk."
+        Write-Host "!! If available, Disk 1's icon will be reused. Select Disk 1 regardless !!"
+        $selection = Read-Host "Select best result"
         Write-Host $r[$selection]
         return $r[$selection].Serial.trim().split('&')[0]
     } else {
@@ -154,17 +163,17 @@ function Search-Redump {
     }
 }
 
-# start script
+# start initial script
 
 $currPath = $(Get-Location).Path
 
-Write-Host "Select emulator"
+Write-Host "Select emulator executable: "
 $emulatorPicker = New-Object System.Windows.Forms.OpenFileDialog -Property @{ InitialDirectory = $currPath }
 $null = $emulatorPicker.ShowDialog()
 $emulatorPath = $emulatorPicker.FileName
 Write-Host "Selected $emulatorPath"
 
-Write-Host "Select rom"
+Write-Host "Select rom file"
 $romPicker = New-Object System.Windows.Forms.OpenFileDialog -Property @{ InitialDirectory = $currPath }
 $null = $romPicker.ShowDialog()
 $romPath = $romPicker.FileName
@@ -189,14 +198,16 @@ if ($createIcon -eq 'y') {
     }
     Write-Host $selectedRegion
     $romName = [System.IO.Path]::GetFileNameWithoutExtension($romPath)
-    # $romName = '007 racing'
+
     $serialCode = Search-Redump -RomName $romName -SelectedRegion $selectedRegion
     Write-Host "Found $serialCode"
 
     $iconLocation = Split-Path -Parent $emulatorPath
     $iconLocation = "$iconLocation\$serialCode"
+
     # create folder for the thumbnail
     # New-Item -ItemType Directory -Path "$iconLocation\$serialCode"
+
     Get-PsxDatacenterImage -RomName $romName -Region $selectedRegion -Serial $serialCode -SaveLocation $iconLocation
 
     Write-Host "Select shortcut save location"
@@ -220,49 +231,3 @@ if ($createIcon -eq 'y') {
     }
     New-Shortcut @prop
 }
-
-# store the current path of the script, should be /GameRoot or whatever GameRoot should correspond to
-
-
-# create an instanceof FolderBrowserDialog
-
-# to extend the script, rather than trying to bundle the game + emulator,
-# we could share the script, allowing the user to select its emulator exe and rom to create a shortcut instead,
-# although, this might be hard to include things like nice icons, but it might be fun to try and do that anyways
-
-# start folder browser window
-
-# vars
-# emulatorExePath - since we know the current directory of the script (the bat script root), EmuDir is implied.
-# sould be replaced if the script lets the user select their own emulator exe
-# $emulatorExePath = "$currPath\EmuDir\My-Emulator.exe"
-
-# # path to the shortcut icon, stored in the EmurDir directory
-# $iconPath = "$currPath\EmuDir\gameicon.ico"
-
-# # set up parameter object for the New-Shortcut function above
-# # an array for multidisk games... dont need 2 disks? only use one object
-# $props = (
-#     @{
-#         # 'ShortcutPath' = Join-Path -Path ([Environment]::GetFolderPath("Desktop")) -ChildPath 'ConnectPrinter.lnk' - from stackoverflow
-#         # ensure these attributes are changed to your liking
-#         'ShortcutPath' = Join-Path -Path $folderBrowser.SelectedPath -ChildPath 'NAME-OF-SHORTCUT (Disk 1).lnk'
-#         'TargetPath'   = $emulatorExePath
-#         'Arguments'    = '-fullscreen', '-portable', '-slowboot', "$currPath\EmuDir\games\Game_disk1.cue" # duckstation arguments
-#         'IconLocation' = $iconPath
-#         'Description'  = 'Game (Disk 1)'
-#     },
-
-#     @{
-#         'ShortcutPath' = Join-Path -Path $folderBrowser.SelectedPath -ChildPath 'NAME-OF-SHORTCUT (Disk 2).lnk'
-#         'TargetPath'   = $emulatorExePath
-#         'Arguments'    = '-fullscreen', '-portable', '-slowboot', "$currPath\EmuDir\games\Game_disk2.cue"
-#         'IconLocation' = $iconPath
-#         'Description'  = 'Game (Disk 2)'
-#     }
-# )
-
-# foreach ($prop in $props) {
-# }
-
-# Write-Host "Shortcuts were placed in $($folderBrowser.SelectedPath)
